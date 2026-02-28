@@ -6,7 +6,7 @@
 [![Cookie Clicker Version](https://img.shields.io/badge/Cookie%20Clicker-2.052-orange)](https://orteil.dashnet.org/cookieclicker/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg)](#)
 
-**JACCS** (based on the **OmniCookie** architecture) is a high-performance automation and analysis framework for **Cookie Clicker**. Far from being just another autoclicker, it is an **Expert System** that unifies the collective intelligence of the modding community into a single, asynchronous, optimized core designed for end-game efficiency and stealth.
+**JACCS** is a high-performance automation and analysis framework for **Cookie Clicker**. Far from being just another autoclicker, it is an **Expert System** that unifies the collective intelligence of the modding community into a single, asynchronous, optimized core designed for end-game efficiency and stealth.
 
 ---
 
