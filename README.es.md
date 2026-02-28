@@ -5,7 +5,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Versión Cookie Clicker](https://img.shields.io/badge/Cookie%20Clicker-2.052-orange)](https://orteil.dashnet.org/cookieclicker/)
 
-**JACCS** (basado en la arquitectura **OmniCookie**) es un entorno de automatización y análisis de alto rendimiento para **Cookie Clicker**. No es un simple script de autoclick; es un **Sistema Experto** que unifica la inteligencia colectiva de la comunidad en un único núcleo asíncrono, optimizado para el *end-game* y diseñado para ser virtualmente indetectable.
+**JACCS** es un entorno de automatización y análisis de alto rendimiento para **Cookie Clicker**. No es un simple script de autoclick; es un **Sistema Experto** que unifica la inteligencia colectiva de la comunidad en un único núcleo asíncrono, optimizado para el *end-game* y diseñado para ser virtualmente indetectable.
 
 ---
 
