@@ -89,20 +89,27 @@ Para que **JACCS** se cargue automáticamente cada vez que abras el juego, haz l
 
 ```javascript
 // ==UserScript==
-// @name         Cargador JACCS
-// @namespace    [http://tampermonkey.net/](http://tampermonkey.net/)
-// @version      1.0
-// @description  Mod unificado para Cookie Clicker (Monster, Bot, Auto)
-// @author       TuNombre
-// @match        [https://orteil.dashnet.org/cookieclicker/](https://orteil.dashnet.org/cookieclicker/)
+// @name         JACCS Loader (PelayoHer)
+// @namespace    http://tampermonkey.net/
+// @version      1.2
+// @description  Cargador oficial de JACCS para Cookie Clicker
+// @author       PelayoHer
+// @match        https://orteil.dashnet.org/cookieclicker/
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=dashnet.org
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
-    // Sustituye 'TU_USUARIO' por tu nombre de usuario de GitHub
-    var script = document.createElement('script');
-    script.src = 'https://TU_USUARIO.github.io/JACCS/src/main.js';
-    document.head.appendChild(script);
-})();
 
+    // Usamos master porque es el nombre de tu rama en GitHub
+    // El ?v= al final evita que jsDelivr te sirva una versión vieja por error
+    var repoUrl = 'https://cdn.jsdelivr.net/gh/PelayoHer/YACCS@master/src/main.js?v=' + Date.now();
+
+    var script = document.createElement('script');
+    script.id = 'jaccs-loader';
+    script.src = repoUrl;
+    document.head.appendChild(script);
+
+    console.log("JACCS: Loader injected successfully.");
+})();
