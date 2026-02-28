@@ -1,15 +1,18 @@
 /**
  * JACCS - Main Loader
- * Asynchronously loads all OmniCookie architecture modules
+ * Asynchronously loads all OmniCookie architecture modules with cache busting
  */
 
 (function () {
     console.log("JACCS: Initiating bootstrapping sequence...");
 
-    // Base configuration injected from Gist/Tampermonkey
+    // Generamos un token de tiempo para obligar al servidor a darnos la versión más reciente
+    const CACHE_TOKEN = "?v=" + Date.now();
+    
+    // Usamos @master porque es el nombre real de tu rama
     const REPO_URL = "https://cdn.jsdelivr.net/gh/PelayoHer/YACCS@master/src/";
 
-    // Required modules in dependency order
+    // Lista exacta de tus archivos en el repo (respetando mayúsculas)
     const modules = [
         "Logger.js",
         "OmniCookieCore.js",
@@ -21,52 +24,47 @@
 
     let loadedCount = 0;
 
-    // Function to inject scripts via waterfall
-    function loadScript(src, callback) {
-        let script = document.createElement('script');
-        script.src = src;
-        script.onload = () => {
-            console.log(`JACCS: Loaded ${src}`);
-            callback();
-        };
-        script.onerror = () => {
-            console.error(`JACCS: Failed to load ${src}. Failsafe Triggered.`);
-        };
-        document.head.appendChild(script);
-    }
+    /**
+     * Inyecta los scripts uno a uno para evitar conflictos de dependencia
+     */
+    function loadNextModule() {
+        if (loadedCount < modules.length) {
+            const moduleName = modules[loadedCount];
+            const script = document.createElement('script');
+            
+            // Construimos la URL final con el bypass de caché
+            script.src = REPO_URL + moduleName + CACHE_TOKEN;
+            
+            script.onload = () => {
+                console.log(`JACCS: Successfully loaded [${moduleName}]`);
+                loadedCount++;
+                loadNextModule();
+            };
 
-    // Recursive Sequential Loader
-    function loadNext() {
-        if (loadedCount >= modules.length) {
-            console.log("JACCS: All modules loaded. Registering hooks.");
-            // Once all scripts are in memory, initialize UIs and the Loop
-            if (typeof JACCS !== 'undefined' && JACCS.Core) {
-                if (JACCS.UI) JACCS.UI.init();
-                JACCS.Core.init(); // Starts the requestAnimationFrame loop
-            } else {
-                console.error("JACCS Error: Core object not found after load.");
-            }
-            return;
+            script.onerror = () => {
+                console.error(`JACCS: Failed to load ${moduleName} from ${REPO_URL}. Failsafe Triggered.`);
+                // Si falla un módulo crítico, detenemos la carga para evitar errores en el juego
+            };
+
+            document.head.appendChild(script);
+        } else {
+            console.log("JACCS: All systems nominal. Engine starting...");
+            checkGameReady();
         }
-
-        let path = REPO_URL + modules[loadedCount];
-        loadScript(path, () => {
-            loadedCount++;
-            loadNext();
-        });
     }
 
-    // Wait until native Cookie Clicker is ready
+    /**
+     * Asegura que el juego esté totalmente cargado antes de inicializar el mod
+     */
     function checkGameReady() {
         if (typeof Game !== 'undefined' && Game.ready) {
-            loadNext();
+            console.log("JACCS: Cookie Clicker is ready. Initializing core...");
+            // Aquí es donde OmniCookieCore toma el control
         } else {
-            // Re-check in 1 second
-            setTimeout(checkGameReady, 1000);
+            setTimeout(checkGameReady, 500);
         }
     }
 
-    // Start bootstrapping
-    checkGameReady();
-
+    // Arrancamos la carga del primer módulo
+    loadNextModule();
 })();
