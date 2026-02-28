@@ -7,7 +7,7 @@
     console.log("JACCS: Initiating bootstrapping sequence...");
 
     // Base configuration injected from Gist/Tampermonkey
-    const REPO_URL = "https://TU_USUARIO.github.io/JACCS/src/";
+    const REPO_URL = "https://cdn.jsdelivr.net/gh/PelayoHer/YACCS@main/src/";
 
     // Required modules in dependency order
     const modules = [
