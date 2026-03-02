@@ -7,7 +7,6 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Versión Cookie Clicker](https://img.shields.io/badge/Cookie%20Clicker-2.052+-orange)](https://orteil.dashnet.org/cookieclicker/)
 
-**JACCS** es un entorno de automatización y análisis de alto rendimiento, perfeccionado matemáticamente para **Cookie Clicker**. No es un simple script de autoclick; es un **Sistema Experto** diseñado explícitamente para el Speedrun y obtener el 100% de los logros del juego.
 
 ---
 
@@ -60,3 +59,4 @@ Olvídate de instalaciones complejas. Un entorno de desarrollo local con un scri
 5. Guarda (`Ctrl + S`) y simplemente refresca completamente la página de Cookie Clicker (`F5`).
 
 *(Nota: La carpeta `src` y el script `build.py` existen únicamente para el desarrollo, modularidad y contribución. El usuario final solo necesita el archivo final `jaccs-tampermonkey.user.js`).*
+
