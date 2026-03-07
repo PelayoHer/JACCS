@@ -2,107 +2,60 @@
 
 [English](README.md) | [Español](README.es.md)
 
+![Logo de JACCS](logo.png)
+
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Versión Cookie Clicker](https://img.shields.io/badge/Cookie%20Clicker-2.052-orange)](https://orteil.dashnet.org/cookieclicker/)
+[![Versión Cookie Clicker](https://img.shields.io/badge/Cookie%20Clicker-2.052+-orange)](https://orteil.dashnet.org/cookieclicker/)
 
-**JACCS** (basado en la arquitectura **OmniCookie**) es un entorno de automatización y análisis de alto rendimiento para **Cookie Clicker**. No es un simple script de autoclick; es un **Sistema Experto** que unifica la inteligencia colectiva de la comunidad en un único núcleo asíncrono, optimizado para el *end-game* y diseñado para ser virtualmente indetectable.
-
----
-
-## Arquitectura: El Motor OmniCookie
-
-A diferencia de los mods convencionales que saturan el navegador, JACCS utiliza un **Single-Loop Engine** basado en `requestAnimationFrame`.
-
-### 1. OmniCookieCore.js (El Corazón)
-* **Sincronización a 60 FPS**: La lógica corre en armonía con el renderizado nativo del juego.
-* **Frame-Dropping Inteligente**: Si un cálculo tarda más de **16ms**, el motor salta el siguiente cuadro para mantener la fluidez del juego y evitar tirones.
-* **Failsafe (Protección Crítica)**: Si detecta una caída de producción inexplicable (>90%), guarda la partida automáticamente y se detiene para proteger tu progreso.
-* **Persistencia Integrada**: Guarda configuraciones y telemetría directamente en tu partida de Cookie Clicker mediante `Game.modSave`.
+**JACCS** es un entorno de automatización y análisis para **Cookie Clicker**. No es un simple script de autoclick; es un **Sistema Experto** diseñado explícitamente para el Speedrun y obtener el 100% de los logros del juego.
 
 ---
 
-## Inteligencia Analítica: EfficiencyEngine.js
+## Los 8 Pilares de la arquitectura de JACCS
 
-Este módulo perfecciona la lógica matemática de **Cookie Monster**.
+### 1. Motor Síncrono Principal (`src/OmniCookieCore.js`)
+A diferencia de los mods que saturan tu navegador inyectando múltiples temporizadores `setInterval`, JACCS opera sobre un único bucle maestro mediante `requestAnimationFrame`. Mide dinámicamente el tiempo de ejecución y descarta intencionadamente sus propios frames si el ciclo dura más de `16ms`, asegurando que el juego jamás se congele ni siquiera en PCs de muy bajos recursos.
 
-### El Algoritmo de Retorno (PP)
-Calcula el **Payback Period (PP)** para determinar qué inversión recupera tu capital en el menor tiempo posible:
+### 2. Economía Matemática Exacta (`src/EfficiencyEngine.js` y `AutoManager.js`)
+Ahorrar sin sentido es del pasado. JACCS utiliza matemáticas para calcular el **Retorno de Inversión (ROI)** exacto de cada edificio y mejora. 
+* **Early Game (0 a 1 Trillón)**: Escalamiento exponencial agresivo e ilimitado. Cero ahorros.
+* **Mid Game (< Get Lucky)**: Calcula dinámicamente y acapara exactamente 15 minutos de CPS puro (Multiplicador 6000x) para maximizar combos regulares de tipo Lucky. La matemática subyacente aísla los modificadores extremos temporales (como *Building Special* o *Frenzy*) para evitar inflar el Banco artificialmente.
+* **Late Game (> Get Lucky)**: Acapara 105 minutos (Multiplicador 42000x) para combos Frenzy+Lucky.
+* **La Anulación de Speedrun**: Si el bot detecta que una compra se amortiza más rápido de lo que el banco tarda en regenerarse, la comprará a la fuerza. Adicionalmente fuerza un override o "Excepción Dorada" sobre ciertas mecánicas y utilidades vitales para combos (Como el *Lucky Day*) que los algoritmos de ROI matemáticos normales rechazarían por no brindar un `Delta CPS` bruto inmediato.
 
-$$PP = \frac{\max(\text{Coste} - \text{Banco}, 0)}{CPS} + \frac{\text{Coste}}{\Delta CPS}$$
+### 3. Ascensión Autónoma Absoluta (`src/AutoAscend.js`)
+El bot calcula derivadas logarítmicas para saltar en el instante en el que sus ingresos superan un multiplicador de `10x` sobre el prestigio actual. Sin embargo, cuenta con un cerrojo estricto de Speedrunner que le **implide realizar su primera ascensión hasta alcanzar los 440 Chips**, asegurando la compra de pasivas base. En la pantalla de ascensión:
+* Evalúa tu historial completo de desbloqueos en la partida.
+* Adquiere las Mejoras Celestiales viajando dinámicamente por la **Ruta Óptima de Speedrun** (Legacy -> Brand Biscuits -> Season Switcher...).
+* Reencarna y retoma la partida de inmediato.
 
-### Telemetría y Snapshots
-* **Ring Buffer**: Mantiene un historial de las últimas 100 capturas de estado (CPS, Banco, Inversiones).
-* **Ahorro de Recursos**: Las capturas se suspenden si la pestaña está oculta, evitando el consumo inútil de CPU.
+### 4. Macros de Minijuegos (`src/MinigameAddon.js`)
 
----
+* **Bolsa de Valores**: Analiza las Medias Móviles (SMA) mezclado con el Reconocimiento de Patrones para comprar barato en los rebotes y vender caro en las caídas.
+* **Devastación de Godzamok**: Durante un "Click Frenzy", sacrifica cientos de edificios baratos simultáneamente en 6 categorías (Granjas, Minas, Bancos, Fábricas, Envíos y Laboratorios) para multiplicar su poder de clic un +500%, y los reabastece de forma segura al instante usando el comprador por lotes nativo del juego.
+* **Double-Cast del Grimorio**: Predice ventanas de combo extremo (Bufos x50) y lanza *Force the Hand of Fate*. Acto seguido, vende sin piedad tus Torres de Mago para bajar el límite máximo de maná por la fuerza y lanzar el hechizo una segunda vez instantáneamente.
+* **Cosecha Botánica y Pesticida (Weedkiller)**: Recolecta plantas maduras no inmortales en el milisegundo exacto en que están listas, maximizando el grindeo de mutaciones. A su vez, incluye un herbicida inteligente que patrulla pasivamente tu jardín buscando plagas o plantas invasoras (como la *Meddleweed*). Si tu ya has desbloqueado la semilla de dicha invasora en el pasado, el bot destruirá la plaga en microsegundos para evitar que ahogue el patrón de cruce genético que has dispuesto en la cuadrícula.
 
-## Ejecución Sigilosa: AutoManager.js
+### 5. Terrones de Azúcar al Milisegundo (`src/AutoLumps.js`)
+¿Por qué esperar a que un Sugar Lump caiga solo al suelo? JACCS se inyecta en la API nativa de `Game.timeSinceLumpRipe()` y recolecta el terrón en la milésima de segundo en la que se vuelve maduro a nivel matemático. Te ahorra, literalmente, una hora de espera inútil por cada terrón.
 
-Diseñado bajo la filosofía de **CookieBot** para imitar a un jugador humano experto.
+### 6. Interfaz Avanzada Zero-GPU y Sigilo (`src/UI.js` y `Logger.js`)
+Imprimir en consola miles de cálculos de ROI cada segundo colpasaría Chrome. Por ello, JACCS inyecta una falsa interfaz Shadow DOM que levita elegantemente sobre el juego. Allí renderiza sus avisos silenciosos. Además, incluye un **Modo Error Humano** que falla a propósito el 0.2% de los clics para evadir software anti-cheats heurístico.
 
-### Sigilo y Humanización
-* **Clicks Poisson**: Los intervalos de clic varían estadísticamente para romper patrones robóticos detectables.
-* **Latencia Variable**: Captura galletas doradas con un retraso humano (0.8s - 3.5s) basado en una **curva de Gauss**.
-* **Modo de Error Humano**: Probabilidad del **0.2%** de ignorar un evento, simulando un descuido real.
-* **Rampa de Aceleración**: Tarda **0.5s** en alcanzar su máxima velocidad (50+ CPS) al detectar un bufo, emulando la reacción motora humana.
+### 7. Soporte de Inyección Nativo
+JACCS es respetuoso con el código fuente de Orteil. Emplea la función oficial de inyección `Game.registerMod()` para enlazar perfectamente sus métodos de carga, inicio y guardado en la partida original sin pervertir la cadena de texto de tu partida guardada. También incluye un *Failsafe Crítico* que fuerza un autoguardado si detecta caídas de CPS inesperadas.
 
-### Reserva Bancaria Dinámica (Safe Bank)
-Calcula permanentemente la reserva necesaria para maximizar los premios "Lucky!". Durante un **Frenzy**, retiene las compras para elevar la meta de ahorro a $(CPS \times 7) \times 6000$.
-
----
-
-## Maestría en Minijuegos: MinigameAddon.js
-
-Basado en la micro-gestión avanzada de **AutoCookie**.
-
-* **Bolsa de Valores (SMA)**: Analiza tendencias usando **Medias Móviles Simples**. Compra en valles y vende en picos alcistas de forma automática.
-* **Grimorio (Double Casting)**: Ejecuta el combo de lanzar un hechizo, vender torres de magos para manipular el coste de maná y lanzar un segundo hechizo al instante.
-* **Limpieza de Wrinklers**: Explota arrugadores maduros pero protege con seguridad absoluta a los ejemplares **"Shiny"**.
-
----
-
-## Interfaz y Eficiencia (Zero-Background)
-
-* **Shadow DOM**: Interfaz aislada que no entra en conflicto con el diseño original del juego.
-* **GPU Kill-Switch**: Si minimizas el panel o cambias de pestaña, JACCS **detiene** el renderizado de gráficas y UI. Esto elimina las fugas de memoria y reduce el uso de RAM y CPU al mínimo mientras estás AFK.
-
----
-
-## Créditos e Inspiraciones
-
-JACCS es un proyecto de consolidación que rinde homenaje a los pilares del modding de Cookie Clicker:
-
-1. **Cookie Monster**: Por el estándar de análisis de eficiencia y cálculo de PP.
-2. **CookieBot (prinzstani)**: Por la visión de un juego automático seguro y humano.
-3. **AutoCookie (Elekester)**: Por la automatización experta de minijuegos.
-4. **OrcJMR**: Por la metodología de inyección limpia y carga asíncrona.
+### 8. Despliegue Monolítico (`build.py`)
+Olvídate de instalaciones complejas. Un entorno de desarrollo local con un script en Python toma los 9 intrincados módulos arquitectónicos y los funde en un único archivo para Tampermonkey (`jaccs-tampermonkey.user.js`) habilitado para superar las severas Políticas restrictivas de Seguridad de Contenido (CSP) del servidor web original.
 
 ---
 
 ## Instalación (Tampermonkey)
 
-Para que **JACCS** se cargue automáticamente cada vez que abras el juego, haz lo siguiente:
+1. **Instala Tampermonkey** en Chrome, Firefox, o Edge.
+2. Haz clic en **Crear un nuevo script**.
+3. Copia el contenido entero del archivo `jaccs-tampermonkey.user.js` alojado en este repositorio.
+4. Pégalo reescribiendo el código por defecto de Tampermonkey.
+5. Guarda (`Ctrl + S`) y simplemente refresca completamente la página de Cookie Clicker (`F5`).
 
-1.  **Instala Tampermonkey**: Descarga la extensión para tu navegador (Chrome, Firefox, Edge).
-2.  **Crea un nuevo Script**: Abre el panel de Tampermonkey y haz clic en el botón **"+"** (Crear nuevo script).
-3.  **Pega el Cargador**: Borra el código por defecto y pega este bloque:
-
-```javascript
-// ==UserScript==
-// @name         Cargador JACCS
-// @namespace    [http://tampermonkey.net/](http://tampermonkey.net/)
-// @version      1.0
-// @description  Mod unificado para Cookie Clicker (Monster, Bot, Auto)
-// @author       TuNombre
-// @match        [https://orteil.dashnet.org/cookieclicker/](https://orteil.dashnet.org/cookieclicker/)
-// @grant        none
-// ==/UserScript==
-
-(function() {
-    'use strict';
-    // Sustituye 'TU_USUARIO' por tu nombre de usuario de GitHub
-    var script = document.createElement('script');
-    script.src = 'https://TU_USUARIO.github.io/JACCS/src/main.js';
-    document.head.appendChild(script);
-})();
-
+*(Nota: La carpeta `src` y el script `build.py` existen únicamente para el desarrollo, modularidad y contribución. El usuario final solo necesita el archivo final `jaccs-tampermonkey.user.js`).*

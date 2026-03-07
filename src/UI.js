@@ -1,6 +1,6 @@
 /**
  * JACCS - UI Module (Zero-Background Rendering)
- * Injects a Shadow DOM interface to display analytics.
+ * Injects a Shadow DOM interface to display the feed.
  */
 
 if (typeof JACCS === 'undefined') {
@@ -10,217 +10,215 @@ if (typeof JACCS === 'undefined') {
 JACCS.UI = (function () {
     let _shadowRoot = null;
     let _container = null;
-    let _isMinimized = false;
-
-    // UI Elements
-    let _elRawCps = null;
-    let _elEffCps = null;
-    let _elSafeBank = null;
-    let _elBurstState = null;
     let _logContainer = null;
-    let _canvas = null;
-    let _ctx = null;
+    let _isVisible = true;
 
-    /**
-     * Shadow DOM Injection and HTML Structure
-     */
-    function _buildInterface() {
-        if (document.getElementById('jaccs-host')) return;
+    // We will inject the CSS inline to avoid extra network requests for the user script
+    const CSS_STYLES = `
+        :host {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 350px;
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #ccc;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            z-index: 99999999;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+
+        .header {
+            background: #222;
+            padding: 8px 12px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+        }
+
+        .header-title {
+            color: #fff;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #4caf50;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 5px #4caf50;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .toggle-btn:hover { color: #fff; }
+
+        .content {
+            padding: 10px;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #333;
+            background: #111;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .log-area::-webkit-scrollbar { width: 6px; }
+        .log-area::-webkit-scrollbar-track { background: #111; }
+        .log-area::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+        .log-entry {
+            margin-bottom: 4px;
+            line-height: 1.3;
+            word-wrap: break-word;
+        }
+
+        .log-time { color: #666; margin-right: 5px; }
+
+        /* Categorized Colors */
+        .log-cat-info { color: #aaa; }
+        .log-cat-purchase { color: #4caf50; font-weight: bold; }
+        .log-cat-magic { color: #ba68c8; }
+        .log-cat-stock { color: #64b5f6; }
+        .log-cat-stealth { color: #ffb74d; font-style: italic; }
+        .log-cat-garden { color: #81c784; }
+        .log-cat-lumps { color: #e57373; font-weight: bold;}
+        .log-cat-error { color: #f44336; font-weight: bold; background: rgba(244,67,54,0.1); }
+        
+        .hidden { display: none !important; }
+    `;
+
+    function _buildUI() {
+        if (document.getElementById('jaccs-ui-wrapper')) return;
 
         let host = document.createElement('div');
-        host.id = 'jaccs-host';
+        host.id = 'jaccs-ui-wrapper';
         document.body.appendChild(host);
 
-        // We create Shadow DOM (Closed to avoid external scripts)
         _shadowRoot = host.attachShadow({ mode: 'open' });
 
-        // Styles
-        let linkStyle = document.createElement('link');
-        linkStyle.rel = 'stylesheet';
-        // In production this is bundled, here we use relative local path if served
-        linkStyle.href = 'https://TU_USUARIO.github.io/JACCS/src/Styles.css';
-        _shadowRoot.appendChild(linkStyle);
+        let style = document.createElement('style');
+        style.textContent = CSS_STYLES;
+        _shadowRoot.appendChild(style);
 
-        // DOM Structure
         _container = document.createElement('div');
-        _container.id = 'jaccs-panel';
-
-        _container.innerHTML = `
-            <div class="jaccs-header">
-                <h2>🍪 JACCS Dashboard</h2>
-                <button class="jaccs-toggle-btn" id="btn-minimize">_</button>
-            </div>
-            <div class="jaccs-content">
-                <canvas id="jaccs-efficiency-chart"></canvas>
-                
-                <div class="jaccs-stat-row">
-                    <span class="jaccs-stat-label">Raw CPS</span>
-                    <span class="jaccs-stat-value" id="val-raw-cps">0</span>
-                </div>
-                
-                <div class="jaccs-stat-row">
-                    <span class="jaccs-stat-label">Safe Bank Goal</span>
-                    <span class="jaccs-stat-value" id="val-safe-bank">0</span>
-                </div>
-                
-                <div class="jaccs-stat-row">
-                    <span class="jaccs-stat-label">Logic State</span>
-                    <span class="jaccs-stat-value" id="val-burst-state">Human</span>
-                </div>
-                
-                <div id="jaccs-log-container">
-                    <!-- Event logs injected here -->
-                </div>
-                
-                <select class="jaccs-profile-select" id="profile-select">
-                    <option value="balanced">Profile: Balanced</option>
-                    <option value="stealth">Profile: Ultra-Human (Stealth)</option>
-                    <option value="reckless">Profile: Reckless (Burst All)</option>
-                </select>
-            </div>
-        `;
-
+        _container.innerHTML = '' +
+            '<div class="header" id="jaccs-drag-handle">' +
+            '<div class="header-title">' +
+            '<span class="status-dot"></span>' +
+            'JACCS Autonomous Feed' +
+            '</div>' +
+            '<button class="toggle-btn" id="jaccs-toggle">_</button>' +
+            '</div>' +
+            '<div class="content" id="jaccs-content">' +
+            '<div class="log-area" id="jaccs-log-feed"></div>' +
+            '</div>';
         _shadowRoot.appendChild(_container);
 
-        // Node Assignment
-        _elRawCps = _shadowRoot.getElementById('val-raw-cps');
-        _elSafeBank = _shadowRoot.getElementById('val-safe-bank');
-        _elBurstState = _shadowRoot.getElementById('val-burst-state');
-        _canvas = _shadowRoot.getElementById('jaccs-efficiency-chart');
-        _logContainer = _shadowRoot.getElementById('jaccs-log-container');
+        _logContainer = _shadowRoot.getElementById('jaccs-log-feed');
 
-        if (_canvas) _ctx = _canvas.getContext('2d');
+        _attachEvents();
+    }
 
-        // Events
-        _shadowRoot.getElementById('btn-minimize').addEventListener('click', _toggleMinimize);
-        _shadowRoot.getElementById('profile-select').addEventListener('change', (e) => {
-            console.log("JACCS: Profile changed to", e.target.value);
-            // Profile logic would go here
+    function _attachEvents() {
+        let toggleBtn = _shadowRoot.getElementById('jaccs-toggle');
+        let contentPane = _shadowRoot.getElementById('jaccs-content');
+        let handle = _shadowRoot.getElementById('jaccs-drag-handle');
+
+        toggleBtn.addEventListener('click', () => {
+            _isVisible = !_isVisible;
+            if (_isVisible) {
+                contentPane.classList.remove('hidden');
+                toggleBtn.innerText = '_';
+            } else {
+                contentPane.classList.add('hidden');
+                toggleBtn.innerText = 'O';
+            }
         });
-    }
 
-    function _toggleMinimize() {
-        _isMinimized = !_isMinimized;
-        if (_isMinimized) {
-            _container.classList.add('minimized');
-            // GPU KILLER: Hiding the canvas so the browser doesn't spend ram painting its offscreen buffer
-            if (_canvas) _canvas.style.display = 'none';
-        } else {
-            _container.classList.remove('minimized');
-            if (_canvas) _canvas.style.display = 'block';
+        // Basic Dragging
+        let isDragging = false;
+        let currentX; let currentY; let initialX; let initialY; let xOffset = 0; let yOffset = 0;
+
+        handle.addEventListener("mousedown", dragStart);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("mousemove", drag);
+
+        function dragStart(e) {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            if (e.target === handle || handle.contains(e.target)) {
+                isDragging = true;
+            }
         }
-    }
-
-    /**
-     * Draws the RingBuffer data on the Canvas (Visual Snapshotting)
-     */
-    function _drawTelemetry() {
-        if (!_ctx || !_canvas) return;
-
-        let snaps = JACCS.State.getSnapshots();
-        if (snaps.length < 2) return;
-
-        let w = _canvas.width;
-        let h = _canvas.height;
-
-        _ctx.clearRect(0, 0, w, h);
-        _ctx.beginPath();
-        _ctx.strokeStyle = '#00d2ff';
-        _ctx.lineWidth = 2;
-
-        // Maps the 'b' (Bank) values to the Y axis
-        let maxV = Math.max(...snaps.map(s => s.b));
-        let minV = Math.min(...snaps.map(s => s.b));
-        let range = maxV - minV || 1;
-
-        let stepX = w / (snaps.length - 1);
-
-        for (let i = 0; i < snaps.length; i++) {
-            let x = i * stepX;
-            let normY = (snaps[i].b - minV) / range;
-            let y = h - (normY * (h - 20)) - 10; // Padding
-
-            if (i === 0) _ctx.moveTo(x, y);
-            else _ctx.lineTo(x, y);
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
         }
-
-        _ctx.stroke();
-    }
-
-    function _renderLog() {
-        if (!_logContainer || !JACCS.Logger) return;
-
-        // We check if there are new logs in the queue to avoid thrashing the DOM
-        if (!JACCS.Logger.checkVblank()) return;
-
-        let logs = JACCS.Logger.getLogs();
-
-        // DOM Fragment for efficient manipulation
-        let fragment = document.createDocumentFragment();
-
-        for (let i = 0; i < logs.length; i++) {
-            let l = logs[i];
-            let row = document.createElement('div');
-            row.className = 'jaccs-log-entry';
-
-            // Safe innerHTML, the log content is ours
-            row.innerHTML = `<span class="time">${l.time}</span> <strong style="color:${l.color}">${l.prefix}</strong> <span class="msg">${l.msg}</span>`;
-            fragment.appendChild(row);
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                // Move the host, not the shadow container
+                let host = document.getElementById('jaccs-ui-wrapper');
+                // The translation requires overriding the bottom/left fixed position via transform
+                host.style.transform = "translate3d(" + currentX + "px, " + currentY + "px, 0)";
+            }
         }
-
-        // Clears and inserts
-        _logContainer.innerHTML = '';
-        _logContainer.appendChild(fragment);
-
-        // Auto-scroll to the bottom
-        _logContainer.scrollTop = _logContainer.scrollHeight;
     }
 
     return {
         init: function () {
-            _buildInterface();
+            _buildUI();
+            if (JACCS.Logger) JACCS.Logger.info("UI rendering initialized. complete.");
         },
 
-        render: function (timestamp) {
-            // ZERO-BACKGROUND RENDERING:
-            // If the tab is not visible or the panel is minimized, don't paint anything.
-            if (_isMinimized || document.hidden || document.visibilityState !== 'visible') {
-                return;
+        refreshLogs: function () {
+            if (!_isVisible || !_logContainer || !JACCS.Logger) return;
+
+            // Zero-Background Philosophy: We only manipulate DOM when the panel is open.
+            let logs = JACCS.Logger.getLogs();
+            let htmlStr = '';
+
+            for (let i = 0; i < logs.length; i++) {
+                let l = logs[i];
+                htmlStr += '<div class="log-entry">' +
+                    '<span class="log-time">[' + l.time + ']</span> ' +
+                    '<span class="log-cat-' + l.cat + '">' + l.msg + '</span>' +
+                    '</div>';
             }
 
-            // Render text UI (only a few times per sec for perf)
-            if (timestamp % 1000 < 20) {
-                if (Game && _elRawCps) _elRawCps.innerText = Beautify(Game.cookiesPsRaw);
-
-                // Safe Bank Status Logic
-                if (JACCS.AutoManager && _elSafeBank) {
-                    let targetBank = JACCS.AutoManager.getSafeBankTarget();
-                    _elSafeBank.innerText = Beautify(targetBank);
-
-                    if (Game.cookies < targetBank) {
-                        _elSafeBank.className = "jaccs-stat-value warning";
-                    } else {
-                        _elSafeBank.className = "jaccs-stat-value success";
-                    }
-                }
-
-                // Burst Status logic check (Assuming AutoManager messed with it)
-                let isFnzy = false;
-                for (let k in Game.buffs) if (Game.buffs[k].type.name.includes("frenzy")) isFnzy = true;
-
-                if (_elBurstState) {
-                    if (isFnzy) {
-                        _elBurstState.innerText = "BURST (Frenzy)";
-                        _elBurstState.className = "jaccs-stat-value burst";
-                    } else {
-                        _elBurstState.innerText = "Human (Idle)";
-                        _elBurstState.className = "jaccs-stat-value";
-                    }
-                }
-
-                _drawTelemetry();
-                _renderLog(); // Asynchronously renders Logs only when it's safe and necessary.
-            }
+            // Using innerHTML is extremely fast for small arrays (50 items)
+            _logContainer.innerHTML = htmlStr;
         }
     };
+
 })();

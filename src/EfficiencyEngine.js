@@ -1,96 +1,39 @@
 /**
- * JACCS - Efficiency Engine & State Persistence
- * Calculates Payback Period, Delta CPS, and manages Snapshotting
+ * JACCS - Efficiency Engine
+ * Pure math core ported from Cookie Monster to calculate Return on Investment (ROI) 
+ * for buildings and upgrades.
  */
 
 if (typeof JACCS === 'undefined') {
     var JACCS = {};
 }
 
-/**
- * --- Snapshotting / Telemetry ---
- * Keeps a record of player evolution.
- */
-JACCS.State = (function () {
-    let _ringBuffer = [];
-    const MAX_SNAPS = 100;
-
-    return {
-        getSnapshots: function () {
-            return _ringBuffer;
-        },
-
-        loadSnapshots: function (arr) {
-            if (Array.isArray(arr)) _ringBuffer = arr;
-        },
-
-        takeSnapshot: function () {
-            if (!Game || !Game.ready) return;
-
-            // If Efficiency Engine is already calculating, we grab the top 3
-            let top3 = [];
-            if (JACCS.Efficiency && JACCS.Efficiency.lastCache) {
-                top3 = JACCS.Efficiency.lastCache.slice(0, 3).map(i => i.name);
-            }
-
-            let snap = {
-                t: Date.now(),
-                rCps: Game.cookiesPsRaw,
-                eCps: Game.cookiesPs,
-                b: Game.cookies,
-                t3: top3 // "Top 3 PP Buildings"
-            };
-
-            _ringBuffer.push(snap);
-
-            // Enforce size limit
-            if (_ringBuffer.length > MAX_SNAPS) {
-                _ringBuffer.shift();
-            }
-
-            console.log("JACCS Telemetry: Snapshot taken", snap);
-            return snap;
-        }
-    };
-})();
-
-/**
- * --- Pure Math (Cookie Monster Core porting) ---
- */
 JACCS.Efficiency = (function () {
     let _lastValidCPS = 0;
     let _cache = [];
     let _needsRecalc = true;
 
-    // Hooks to Game.Earn or Game.buy to invalidate cache
-    const originalBuy = Game.ObjectsById[0].buy; // just an example, but we make it async
-
     /**
-     * Delta CPS of a Building 
-     * Simulates buying 1 building, calculates CPS diff and reverts state.
-     * (Optimized version, not hard-simulate)
+     * Simulates buying 1 building and calculates the strict increase in CPS (Delta).
+     * By faking the purchase, calculating the new CPS, and instantly reverting it,
+     * the bot gathers absolute measurement accuracy without permanent cost side effects.
      */
     function _simulateBuildingDelta(obj) {
-        // In vanilla Cookie Clicker, CPS is non-linear due to Synergies.
-        // We simulate a backup of global variables that affect CPS.
-        let m = 0;
         let pCPS = Game.cookiesPs;
-        let baseObjM = obj.amount;
 
-        // Simulate +1
         obj.amount++;
-        Game.CalculateGains(); // Internal C.Clicker function
+        Game.CalculateGains();
         let delta = Game.cookiesPs - pCPS;
 
-        // Restore
         obj.amount--;
         Game.CalculateGains();
 
-        return Math.max(delta, 0.0001); // Prevent division by zero
+        return Math.max(delta, 0.0001);
     }
 
     /**
-     * Calculates ROI for Active Upgrades that are NOT Click-based (Clicking not evaluated yet)
+     * Simulates buying an upgrade and calculates the strict CPS increase (Delta CPS).
+     * If the delta is exactly 0, it indicates a utility upgrade, which the engine evaluates via exception rules.
      */
     function _simulateUpgradeDelta(upg) {
         if (upg.bought) return 0;
@@ -101,16 +44,22 @@ JACCS.Efficiency = (function () {
 
         let delta = Game.cookiesPs - pCPS;
 
-        upg.bought = 0; // Restore
+        upg.bought = 0;
         Game.CalculateGains();
 
         return Math.max(delta, 0);
     }
 
+    /**
+     * Main Return on Investment (ROI) Calculation Engine.
+     * Calculates the true mathematical cost of every available item: 
+     *      (Time required to save up the Price) + (Time required to pay itself off).
+     * This establishes an absolute hierarchy of what is the single best object to buy next.
+     */
     function _recalculatePP() {
         let results = [];
 
-        // 1. Array of buildings
+        // 1. Buildings Array
         for (let i in Game.Objects) {
             let obj = Game.Objects[i];
             if (obj.locked) continue;
@@ -118,10 +67,11 @@ JACCS.Efficiency = (function () {
             let price = obj.getPrice();
             let delta = _simulateBuildingDelta(obj);
 
-            // PP = (Max between 0, Cost - Current Cookies) / Current CPS + Cost / Delta CPS 
-            let dTime = Math.max(0, (price - Game.cookies)) / Game.cookiesPs;
-            let pPeri = price / delta;
-            let totalPP = dTime + pPeri;
+            // ROI Formula: Time to afford + Time to pay itself off
+            let safeCps = Math.max(Game.cookiesPs, 0.001); // Prevent division by zero mathematically
+            let dTime = Math.max(0, (price - Game.cookies)) / safeCps;
+            let retTime = price / delta;
+            let totalPP = dTime + retTime;
 
             results.push({
                 type: 'building',
@@ -129,26 +79,40 @@ JACCS.Efficiency = (function () {
                 id: obj.id,
                 price: price,
                 delta: delta,
-                pp: totalPP,
+                ROI: totalPP,
                 objRef: obj
             });
         }
 
-        // 2. Upgrades (limited to visible store pool + 5 next ones to avoid frying CPU)
+        // 2. Upgrades Array (Store visible only)
         let upgsInStore = Game.UpgradesInStore;
         for (let u = 0; u < upgsInStore.length; u++) {
             let upg = upgsInStore[u];
-            // We ignore weird types (Click cookies, season switch, etc, which don't give measurable base cps)
-            if (upg.pool === 'toggle' || upg.type === 'cookie') continue;
+            // Ignore click toggles, season switches, and raw cookies (hard to measure base CPS diff)
+            if (upg.pool === 'toggle' || upg.type === 'cookie' || upg.name.includes('Golden switch')) continue;
 
             let price = upg.getPrice();
             let delta = _simulateUpgradeDelta(upg);
 
-            // If delta is zero or negative, it's incalculable (e.g. Golden switch)
-            if (delta <= 0) continue;
+            // Essential mechanics don't instantly add direct CPS, so their delta=0. We force priority.
+            let isEssential = (upg.name === 'Lucky day' || upg.name === 'Serendipity' || upg.name === 'Get lucky' || upg.name === 'Bingo center/Research facility');
 
-            let dTime = Math.max(0, (price - Game.cookies)) / Game.cookiesPs;
-            let pPeri = price / delta;
+            if (delta <= 0 && !isEssential) {
+                // If it's a utility or click upgrade but extremely cheap (< 15 mins of CPS), buy it eventually
+                let safeCpsLocal = Math.max(Game.cookiesPs, 1);
+                if (price > 0 && price < (safeCpsLocal * 900)) {
+                    delta = safeCpsLocal * 0.001;
+                } else {
+                    continue;
+                }
+            } else if (isEssential) {
+                // Force an insanely high delta (equivalent to +100% total CPS) so the bot buys it instantly
+                delta = Math.max(Game.cookiesPs, 1);
+            }
+
+            let safeCps = Math.max(Game.cookiesPs, 0.001);
+            let dTime = Math.max(0, (price - Game.cookies)) / safeCps;
+            let retTime = price / delta;
 
             results.push({
                 type: 'upgrade',
@@ -156,13 +120,13 @@ JACCS.Efficiency = (function () {
                 id: upg.id,
                 price: price,
                 delta: delta,
-                pp: dTime + pPeri,
+                ROI: dTime + retTime,
                 objRef: upg
             });
         }
 
-        // Sort by lowest PP (Most efficient)
-        results.sort((a, b) => a.pp - b.pp);
+        // Sort by Lowest ROI (Most efficient first)
+        results.sort((a, b) => a.ROI - b.ROI);
 
         _cache = results;
         _needsRecalc = false;
@@ -172,15 +136,15 @@ JACCS.Efficiency = (function () {
 
     return {
         update: function () {
-            // Passive Recalc: Only if CPS changed dramatically (buff) or we bought something
+            // Passive Recalc: Only when CPS shifts massively or a purchase was made
             if (Math.abs(Game.cookiesPs - _lastValidCPS) > (Game.cookiesPs * 0.05) || _needsRecalc) {
                 _lastValidCPS = Game.cookiesPs;
                 _recalculatePP();
+                // console.log("JACCS Efficiency: Recalculated ROI Rankings."); // Muted to prevent UI flood
             }
         },
 
         getBestInvestment: function () {
-            // Force if the list is empty
             if (_cache.length === 0) _recalculatePP();
             return _cache.length > 0 ? _cache[0] : null;
         },

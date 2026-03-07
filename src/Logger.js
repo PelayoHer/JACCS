@@ -2,8 +2,7 @@
  * JACCS - Logger Module
  * 
  * Manages an internal event queue with a maximum of 50 entries to
- * prevent infinite DOM growth. Integrated with UI.js's Zero-Background
- * Rendering philosophy.
+ * prevent infinite DOM growth. Connects to UI.js for rendering.
  */
 
 if (typeof JACCS === 'undefined') {
@@ -12,66 +11,110 @@ if (typeof JACCS === 'undefined') {
 
 JACCS.Logger = (function () {
     const MAX_LOGS = 50;
-    let _logQueue = [];
-    let _hasNewLogs = false; // Flag so UI.js knows whether to re-render
+    let _logs = [];
 
-    // System Colors Type Definition
-    const TYPES = {
-        INFO: { prefix: '[INFO]', color: '#aaaaaa' }, // Gray
-        PURCHASE: { prefix: '[BUY] ', color: '#4caf50' }, // Green
-        MAGIC: { prefix: '[SPELL]', color: '#b388ff' }, // Purple
-        STOCK: { prefix: '[STOCK]', color: '#00d2ff' }, // Blue
-        STEALTH: { prefix: '[STEALTH]', color: '#ff9800' }, // Orange
-        CRITICAL: { prefix: '[CRIT]', color: '#ff4b4b' }  // Red
+    // Map categories to CSS colors (handled in UI.js)
+    const CATEGORIES = {
+        INFO: 'info',
+        PURCHASE: 'purchase',
+        MAGIC: 'magic',
+        STOCK: 'stock',
+        STEALTH: 'stealth',
+        GARDEN: 'garden',
+        LUMPS: 'lumps',
+        ERROR: 'error'
     };
 
     /**
-     * Adds a log to internal memory
+     * Internal method to push a log
      */
-    function _addLog(typeObj, message) {
-        let d = new Date();
-        let timestamp = `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}]`;
+    function _pushLog(category, message) {
+        let timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" });
 
-        let logEntry = {
-            id: Date.now() + Math.random(),
+        let entry = {
             time: timestamp,
-            prefix: typeObj.prefix,
-            color: typeObj.color,
+            cat: category,
             msg: message
         };
 
-        _logQueue.push(logEntry);
-        if (_logQueue.length > MAX_LOGS) {
-            _logQueue.shift(); // Keep queue at 50 entries max
+        _logs.unshift(entry);
+
+        if (_logs.length > MAX_LOGS) {
+            _logs.pop();
         }
 
-        _hasNewLogs = true;
-
-        // Also send to real console to aid F12 debugging
-        console.log(`%c${timestamp} ${typeObj.prefix} ${message}`, `color: ${typeObj.color}`);
+        // Notify UI to re-render if it exists
+        if (JACCS.UI && typeof JACCS.UI.refreshLogs === 'function') {
+            JACCS.UI.refreshLogs();
+        }
     }
 
     return {
-        events: {
-            INFO: function (msg) { _addLog(TYPES.INFO, msg); },
-            PURCHASE: function (msg) { _addLog(TYPES.PURCHASE, msg); },
-            MAGIC: function (msg) { _addLog(TYPES.MAGIC, msg); },
-            STOCK: function (msg) { _addLog(TYPES.STOCK, msg); },
-            STEALTH: function (msg) { _addLog(TYPES.STEALTH, msg); },
-            CRITICAL: function (msg) { _addLog(TYPES.CRITICAL, msg); }
-        },
+        // Public logging methods
+        info: (msg) => _pushLog(CATEGORIES.INFO, msg),
+        purchase: (msg) => _pushLog(CATEGORIES.PURCHASE, msg),
+        magic: (msg) => _pushLog(CATEGORIES.MAGIC, msg),
+        stock: (msg) => _pushLog(CATEGORIES.STOCK, msg),
+        stealth: (msg) => _pushLog(CATEGORIES.STEALTH, msg),
+        garden: (msg) => _pushLog(CATEGORIES.GARDEN, msg),
+        lumps: (msg) => _pushLog(CATEGORIES.LUMPS, msg),
+        error: (msg) => _pushLog(CATEGORIES.ERROR, msg),
 
         getLogs: function () {
-            return _logQueue;
-        },
-
-        // Consumes the "dirty" flag
-        checkVblank: function () {
-            if (_hasNewLogs) {
-                _hasNewLogs = false;
-                return true;
-            }
-            return false;
+            return _logs;
         }
     };
+
+})();
+
+// --- Intercept console.log to feed the custom UI (Optional but cool) ---
+// This regex will catch our own "JACCS Xx:" logs from the other modules.
+(function interceptConsoleLog() {
+    const originalLog = console.log;
+    console.log = function () {
+        originalLog.apply(console, arguments);
+
+        if (typeof arguments[0] === 'string' && arguments[0].startsWith('JACCS ')) {
+            let fullMsg = arguments[0];
+            let catMatch = fullMsg.match(/JACCS (\w+): (.*)/);
+
+            if (catMatch && catMatch.length === 3) {
+                let module = catMatch[1].toLowerCase();
+                let finalMsg = catMatch[2];
+
+                if (module === 'autobuy' || module === 'efficiency') JACCS.Logger.purchase(finalMsg);
+                else if (module === 'stocks') JACCS.Logger.stock(finalMsg);
+                else if (module === 'grimoire' || module === 'godzamok') JACCS.Logger.magic(finalMsg);
+                else if (module === 'stealth') JACCS.Logger.stealth(finalMsg);
+                else if (module === 'garden') JACCS.Logger.garden(finalMsg);
+                else if (module === 'lumps') JACCS.Logger.lumps(finalMsg);
+                else JACCS.Logger.info(finalMsg);
+            }
+        }
+    };
+})();
+
+// --- Anti-Tamper: DevTools Detection ---
+// Detects if the user opens the F12 developer console to inspect the script.
+(function detectDevTools() {
+    let devtoolsOpen = false;
+    const threshold = 160;
+
+    setInterval(function () {
+        // Modern approach: calculating the difference between the outer and inner window bounds.
+        // If the difference is larger than 160px (the typical minimum devtools size), it's likely open docked to a side.
+        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+
+        const isCurrentlyOpen = (widthThreshold || heightThreshold);
+
+        if (isCurrentlyOpen && !devtoolsOpen) {
+            devtoolsOpen = true;
+            if (JACCS.Logger) JACCS.Logger.stealth("SECURITY ALERT: Developer Console (F12) opened. Script inspection detected.");
+        } else if (!isCurrentlyOpen && devtoolsOpen) {
+            devtoolsOpen = false;
+            // Optional: Log when it's closed
+            // if (JACCS.Logger) JACCS.Logger.info("SECURITY UPDATE: Developer Console closed.");
+        }
+    }, 1000);
 })();
