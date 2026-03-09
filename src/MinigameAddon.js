@@ -259,7 +259,7 @@ JACCS.Minigames = (function () {
             // Grimoire is occasionally checked to look for a Combo window
             if (Math.random() < 0.05) {
                 _handleGrimoire();
-                _handleGarden();
+                // Legacy _handleGarden() disabled. Fully migrated to AutoGarden.js FSM.
                 _handlePantheon();
             }
         }

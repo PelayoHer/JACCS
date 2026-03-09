@@ -32,9 +32,10 @@ JACCS.Core = (function () {
             try {
                 if (JACCS.Efficiency) JACCS.Efficiency.update(); // 1. Recalculate ROI mathematics if needed
                 if (JACCS.AutoManager) JACCS.AutoManager.tick(deltaTime, timestamp); // 2. Handle clicks, purchases, UI
-                if (JACCS.Minigames) JACCS.Minigames.tick(deltaTime); // 3. Compute Stocks, Garden, Grimoire, Pantheon
-                if (JACCS.Ascension) JACCS.Ascension.tick(deltaTime, timestamp); // 4. Check rebirth conditions
-                if (JACCS.Lumps) JACCS.Lumps.tick(deltaTime, timestamp); // 5. Check sugar lumps harvesting
+                if (JACCS.Minigames) JACCS.Minigames.tick(deltaTime); // 3. Compute Stocks, Grimoire, Pantheon
+                if (JACCS.GardenBot) JACCS.GardenBot.tick(); // 4. Botanical State Machine
+                if (JACCS.Ascension) JACCS.Ascension.tick(deltaTime, timestamp); // 5. Check rebirth conditions
+                if (JACCS.Lumps) JACCS.Lumps.tick(deltaTime, timestamp); // 6. Check lumps harvesting
             } catch (e) {
                 console.error("JACCS Sub-module crashed in MainLoop:", e);
             }

@@ -6,8 +6,8 @@
 (function () {
     console.log("JACCS: Initiating bootstrapping sequence...");
 
-    // Para probar en local, usamos localhost. Cuando lo subas a GitHub, cambia esto por "https://TU_USUARIO.github.io/JACCS/src-2/"
-    const REPO_URL = "http://localhost:8000/src-2/";
+    // Para probar en local
+    const REPO_URL = "https://github.com/PelayoHer/JACCS/src/";
 
     const modules = [
         "Logger.js",
@@ -16,6 +16,7 @@
         "EfficiencyEngine.js",
         "AutoManager.js",
         "MinigameAddon.js",
+        "AutoGarden.js",
         "AutoAscend.js",
         "AutoLumps.js"
     ];

@@ -242,7 +242,8 @@ JACCS.AutoManager = (function () {
             if (timestamp % 1000 < 20) {
                 _handlePurchases();
             }
-        }
+        },
+        getSafeBank: _getDynamicSafeBank
     };
 
 })();

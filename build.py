@@ -8,6 +8,7 @@ files = [
     'EfficiencyEngine.js', 
     'AutoManager.js', 
     'MinigameAddon.js', 
+    'AutoGarden.js',
     'AutoAscend.js', 
     'AutoLumps.js'
 ]
